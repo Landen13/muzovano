@@ -1,0 +1,25 @@
+{
+  "name": "muzovano",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "canvas": "^2.11.2",
+    "color": "^4.2.3",
+    "color-convert": "^2.0.1",
+    "dotenv": "^16.3.1",
+    "fastest-levenshtein": "^1.0.16",
+    "lodash": "^4.17.21",
+    "minimist": "^1.2.8",
+    "node-fetch": "^3.3.1",
+    "node-vibrant": "^3.2.1-alpha.1",
+    "sanitize-filename": "^1.6.3"
+  }
+}
