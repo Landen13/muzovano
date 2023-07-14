@@ -1,6 +1,5 @@
 import Color from 'color';
 import colorConvert from 'color-convert';
-import levenshtein from 'fastest-levenshtein';
 
 // validate if a color is valid
 // HEX (3 and 6 digits), RGB/RGBA strings and named css colors

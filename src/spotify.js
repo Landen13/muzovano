@@ -6,7 +6,6 @@ import _ from 'lodash';
 import minimist from 'minimist';
 import sanitize from 'sanitize-filename';
 import inquirer from 'inquirer';
-import { distance as getDistance } from 'fastest-levenshtein';
 import { createCanvas, loadImage, Image } from 'canvas';
 
 import config, { configstore } from './config.js';
