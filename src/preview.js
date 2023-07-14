@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 
 import _ from 'lodash';
 import Color from 'color';
@@ -16,6 +17,9 @@ import {
 import config from './config.js';
 
 let COLORS;
+
+const PACKAGE_DIR = path.resolve();
+const CURRENT_DIR = process.cwd();
 
 const args = minimist(process.argv.slice(2));
 
@@ -173,7 +177,7 @@ async function applyVignetteEffect(canvas, _strength = 50, _color = [0, 0, 0]) {
 
 const drawLogo = async (context, palette) => {
   // Load the logo image
-  const logo = await loadImage('./images/play.png');
+  const logo = await loadImage(path.resolve(PACKAGE_DIR, 'images/play.png'));
 
   const logoWidth = config.CANVAS_SIZE * 0.514;
   const logoHeight = config.CANVAS_SIZE * 0.088;
@@ -290,8 +294,8 @@ const logPalette = palette => {
 }
 
 export const createImage = async (imageUrl, data) => {
-  registerFont(config.FONT_TTF_PATH, { family: config.FONT_FAMILY });
-  registerFont(config.FONT_TTF_PATH2, { family: config.FONT_FAMILY2 });
+  registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH), { family: config.FONT_FAMILY });
+  registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH2), { family: config.FONT_FAMILY2 });
 
   const palette = await getPaletteFromImage(imageUrl);
 
@@ -366,9 +370,9 @@ export const createImage = async (imageUrl, data) => {
   // Convert the canvas to a PNG image buffer
   const buffer = canvas.toBuffer();
   const filename = sanitize(data.artistName + ' - ' + data.releaseName);
-  const generatedPath = `./${config.PREVIEW_FOLDER_PATH}/${filename}.png`;
+  const generatedPath = path.resolve(CURRENT_DIR, config.PREVIEW_FOLDER_PATH, `${filename}.png`);
 
-  fs.mkdirSync(config.PREVIEW_FOLDER_PATH, { recursive: true });
+  fs.mkdirSync(path.resolve(CURRENT_DIR, config.PREVIEW_FOLDER_PATH), { recursive: true });
   fs.writeFileSync(generatedPath, buffer);
 
   console.log(`Preview for ${sanitize(filename)} is ready!`);

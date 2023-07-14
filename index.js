@@ -9,13 +9,10 @@ if (process.argv.length <= 2) {
   process.exit(0);
 }
 
-import 'dotenv/config';
-
-// node
-import fs from 'fs';
 import path from 'path';
 
 // npm
+import 'dotenv/config';
 import inquirer from 'inquirer';
 import fetch from 'node-fetch';
 import minimist from 'minimist';
