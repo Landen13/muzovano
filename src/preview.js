@@ -23,8 +23,11 @@ let COLORS;
 const CURRENT_DIR = process.cwd();
 const PACKAGE_DIR = appRoot.toString();
 
-console.log('CURRENT_DIR', CURRENT_DIR);
-console.log('PACKAGE_DIR', PACKAGE_DIR);
+console.log('process.cwd', process.cwd());
+console.log('appRoot.toString', appRoot.toString());
+console.log(appRoot);
+console.log('path.resolve()', path.resolve());
+console.log('path.resolve(./)', path.resolve('./'));
 
 const args = minimist(process.argv.slice(2));
 
