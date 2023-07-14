@@ -23,6 +23,9 @@ let COLORS;
 const CURRENT_DIR = process.cwd();
 const PACKAGE_DIR = appRoot.toString();
 
+console.log('CURRENT_DIR', CURRENT_DIR);
+console.log('PACKAGE_DIR', PACKAGE_DIR);
+
 const args = minimist(process.argv.slice(2));
 
 const DEFAULT_TEXT_OPTIONS = {
