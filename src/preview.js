@@ -2,6 +2,7 @@ import fs from 'fs';
 
 import _ from 'lodash';
 import Color from 'color';
+import Vibrant from 'node-vibrant';
 import sanitize from 'sanitize-filename';
 import minimist from 'minimist';
 import { createCanvas, loadImage, registerFont } from 'canvas';
@@ -12,12 +13,11 @@ import {
   adjustRGBColor,
 } from './utils.js';
 
-import * as _config from './config.js';
+import config from './config.js';
 
-const config = _config.default;
-config.runtime = {};
+let COLORS;
 
-const argv = minimist(process.argv.slice(2));
+const args = minimist(process.argv.slice(2));
 
 const DEFAULT_TEXT_OPTIONS = {
   fontSize: config.CANVAS_SIZE * 0.034,
@@ -34,7 +34,7 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
   const imageX = (config.CANVAS_SIZE - imageWidth) / 2;
   const imageY = config.CANVAS_SIZE * config.CANVAS_TOP_PADDING / 100;
 
-  if (argv.noframe !== undefined ? !argv.noframe : frame) {
+  if (args.noframe !== undefined ? !args.noframe : frame) {
     const strokeWidth = config.CANVAS_SIZE * config.CANVAS_FRAME_STROKE_WIDTH / 100;
 
     const frameX = imageX - (strokeWidth / 2);
@@ -42,8 +42,7 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
     const frameWidth = imageWidth + strokeWidth;
     const frameHeight = imageHeight + strokeWidth;
 
-    const colors = config.runtime.colors;
-    const frameColor = colors.frame || colors.accent;
+    const frameColor = COLORS.frame || COLORS.accent;
 
     context.strokeStyle = `rgb(${frameColor.join(', ')})`;
     context.lineWidth = strokeWidth;
@@ -51,8 +50,8 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
     context.strokeRect(frameX, frameY, frameWidth, frameHeight);
   }
 
-  if (argv.noshadow !== undefined ? !argv.noshadow : shadow) {
-    const boxShadowColor = `rgba(0, 0, 0, 0.5)`;
+  if (args.noshadow !== undefined ? !args.noshadow : shadow) {
+    const boxShadowColor = `rgba(${COLORS.shadow || [0,0,0].join(',')}, 0.5)`;
     const boxShadowBlur = config.CANVAS_SIZE * config.SHADOW_SIZE / 100;
     const boxShadowOffsetX = 0;
     const boxShadowOffsetY = 0;
@@ -78,10 +77,10 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
   context.drawImage(image, imageX, imageY, imageWidth, imageHeight);
 };
 
-const initColors = (colors, palette) => {
-  return colors.reduce((acc, colorVar) => {
+const initColors = (colorNames, palette) => {
+  return colorNames.reduce((acc, colorVar) => {
     let colorDefault = config[`DEFAULT_COLOR_${colorVar.toUpperCase()}`];
-    let colorArg = argv[`${colorVar}color`];
+    let colorArg = args[`${colorVar}color`];
     let colorValue = colorArg || colorDefault;
 
     function parseValue(value) {
@@ -108,8 +107,8 @@ const initColors = (colors, palette) => {
     // Color adjustments
     let percentage = 0;
 
-    const darken = argv[`${colorVar}darken`];
-    const lighten = argv[`${colorVar}lighten`];
+    const darken = args[`${colorVar}darken`];
+    const lighten = args[`${colorVar}lighten`];
 
     if (darken && darken >= 0 && darken <=100) {
       percentage -= darken;
@@ -133,8 +132,8 @@ const drawGradient = (context, canvas, palette) => {
   const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
 
   // Gradient color stops
-  gradient.addColorStop(0, `rgb(${config.runtime.colors.start.join(',')})`);
-  gradient.addColorStop(1, `rgb(${config.runtime.colors.end.join(',')})`);
+  gradient.addColorStop(0, `rgb(${COLORS.start.join(',')})`);
+  gradient.addColorStop(1, `rgb(${COLORS.end.join(',')})`);
 
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -147,9 +146,9 @@ async function applyVignetteEffect(canvas, _strength = 50, _color = [0, 0, 0]) {
   const radius = Math.max(centerX, centerY);
 
   let strength = _strength;
-  let color = config.runtime.colors.vignette || _color;
+  let color = COLORS.vignette || _color;
 
-  if (argv.vignettestrength !== undefined && argv.vignettestrength >= 0 && argv.vignettestrength <= 100) strength = +argv.vignettestrength;
+  if (args.vignettestrength !== undefined && args.vignettestrength >= 0 && args.vignettestrength <= 100) strength = +args.vignettestrength;
 
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   const pixels = imageData.data;
@@ -195,8 +194,7 @@ const drawLogo = async (context, palette) => {
   // Modify the pixel colors while preserving the alpha opacity state
   const { data: pixels } = imageData;
 
-  const colors = config.runtime.colors;
-  const logoColor = colors.logo || colors.accent;
+  const logoColor = COLORS.logo || COLORS.accent;
 
   for (let i = 0; i < pixels.length; i += 4) {
     // Modify the color channels (red, green, blue)
@@ -273,28 +271,55 @@ export const drawText = (text, canvas, userOptions = {}, positionCallback) => {
   context.font = backupFont;
 };
 
-export const createImage = async (imageUrl, palette, data) => {
+const getPaletteFromImage = async imageUrl => {
+  const palette = await Vibrant.from(imageUrl).getPalette();
+
+  for (const color in palette) {
+    if (Object.hasOwnProperty.call(palette, color)) {
+      palette[color] = palette[color]._rgb.map(c => parseInt(c));
+    }
+  }
+
+  return palette;
+};
+
+const logPalette = palette => {
+  for (const color in palette) {
+    console.log('\x1b[48;2;' + palette[color].join(';') + 'm  \x1b[0m', ':', color);
+  }
+}
+
+export const createImage = async (imageUrl, data) => {
   registerFont(config.FONT_TTF_PATH, { family: config.FONT_FAMILY });
   registerFont(config.FONT_TTF_PATH2, { family: config.FONT_FAMILY2 });
+
+  const palette = await getPaletteFromImage(imageUrl);
+
+  console.log('Extracted colors from album cover:');
+  logPalette(palette);
+  console.log('');
 
   const canvas = createCanvas(config.CANVAS_SIZE, config.CANVAS_SIZE);
   const canvasWidth = canvas.width;
   const canvasHeight = canvas.height;
   const context = canvas.getContext('2d', { alpha: true });
 
-  config.runtime = {
-    ...config.runtime,
-    colors: initColors(config.COLORS, palette),
-  };
+  const colorsSymbol = Symbol();
 
+  config[colorsSymbol] = initColors(config.COLORS, palette);
+
+  COLORS = config[colorsSymbol];
 
   drawGradient(context, canvas, palette);
 
-  if (!['0', 0, false, 'no'].includes(argv.vignette)) applyVignetteEffect(canvas);
+  if (args.novignette !== undefined && !args.novignette) {
+    applyVignetteEffect(canvas);
+  }
+
   const logo = await drawLogo(context, palette);
   await drawImage(context, imageUrl, palette);
 
-  const size = calculateFontSize(
+  const releaseFontSize = calculateFontSize(
     data.releaseName.toUpperCase(),
     config.CANVAS_SIZE * 0.6,
     `${DEFAULT_TEXT_OPTIONS.fontFamily}-Bold`,
@@ -303,8 +328,7 @@ export const createImage = async (imageUrl, palette, data) => {
     canvas,
   );
 
-  const colors = config.runtime.colors;
-  const textColor = colors.text || colors.accent;
+  const textColor = COLORS.text || COLORS.accent;
 
   drawText(
     data.releaseName.toUpperCase(),
@@ -312,7 +336,7 @@ export const createImage = async (imageUrl, palette, data) => {
     {
       textColor,
       fontFamily: `${DEFAULT_TEXT_OPTIONS.fontFamily}-Bold`,
-      fontSize: size,
+      fontSize: releaseFontSize,
     },
     (textWidth, textHeight, options) => {
       const x = (canvas.width - textWidth) / 2;
@@ -321,7 +345,7 @@ export const createImage = async (imageUrl, palette, data) => {
 
       const end = canvas.height - (config.CANVAS_SIZE * 0.04) - (config.CANVAS_SIZE * 0.088);
 
-      const y = start + parseInt(1.2 * ((end - start - size - (config.CANVAS_SIZE * 0.034)) / 3.2));
+      const y = start + parseInt(1.2 * ((end - start - releaseFontSize - (config.CANVAS_SIZE * 0.034)) / 3.2));
       return { x, y };
     },
   );
@@ -334,39 +358,25 @@ export const createImage = async (imageUrl, palette, data) => {
       const x = (canvas.width - textWidth) / 2;
       const start = (config.CANVAS_SIZE * 0.06) + (config.CANVAS_SIZE * config.CANVAS_FRAME_STROKE_WIDTH / 100) + (canvas.height * 0.6);
       const end = canvas.height - (config.CANVAS_SIZE * 0.04) - (config.CANVAS_SIZE * 0.088);
-      const y = end - textHeight - parseInt((end - start - size - (config.CANVAS_SIZE * 0.034)) / 3.2);
+      const y = end - textHeight - parseInt((end - start - releaseFontSize - (config.CANVAS_SIZE * 0.034)) / 3.2);
       return { x, y };
     },
   );
 
-  // todo add UA logo if UA
-  // ua.png
-
-  // draw lastfm stats
-  // drawText(
-  //   `Last.fm listeners: ${data.listeners}`,
-  //   canvas,
-  //   {
-  //     fontSize: 16,
-  //     textColor,
-  //   },
-  // );
-
   // Convert the canvas to a PNG image buffer
   const buffer = canvas.toBuffer();
+  const filename = sanitize(data.artistName + ' - ' + data.releaseName);
+  const generatedPath = `./${config.PREVIEW_FOLDER_PATH}/${filename}.png`;
 
-  // Save the image buffer to a file
-  let filename = data.artistName + ' - ' + data.releaseName;
-  // const filenameParams = Object.entries(_.pick(argv, config.COLORS.map(color => `${color}color`)))
-  //   .map(([key, value]) => key + '=' + value)
-  //   .join('_');
-
-  // if (filenameParams) {
-  //   filename += '_';
-  //   filename += filenameParams;
-  // }
-
-  fs.writeFileSync(`./${config.PREVIEW_FOLDER_PATH}/${sanitize(filename)}.png`, buffer);
+  fs.mkdirSync(config.PREVIEW_FOLDER_PATH, { recursive: true });
+  fs.writeFileSync(generatedPath, buffer);
 
   console.log(`Preview for ${sanitize(filename)} is ready!`);
-}
+  console.log(generatedPath);
+  console.log('');
+
+  return {
+    generatedPath,
+    palette,
+  };
+};

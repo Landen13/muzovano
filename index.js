@@ -1,74 +1,116 @@
+#!/usr/bin/env node
+
+if (process.argv.length <= 2) {
+  console.log('Usage: muzovano <album>');
+  console.log('Alternatives:');
+  console.log('  --q=<album> - Search for albums on Spotify');
+  // console.log('  set-api-key - Set the Spotify API key');
+  // console.log('For more information, run impressivesound --help');
+  process.exit(0);
+}
+
 import 'dotenv/config';
-// import pThrottle from 'p-throttle';
-import Vibrant from 'node-vibrant';
+
+// node
 import fs from 'fs';
 import path from 'path';
+
+// npm
+import inquirer from 'inquirer';
 import fetch from 'node-fetch';
 import minimist from 'minimist';
 import sanitize from 'sanitize-filename';
 
+// local
 import { searchAlbum } from './src/spotify.js';
 import { createImage } from './src/preview.js';
 import { removeParentheses } from './src/utils.js';
+import config, { configstore } from './src/config.js';
 
-import * as _config from './src/config.js';
+const args = minimist(process.argv.slice(2));
+const COMMAND = args._.length > 1 ? args._[0] : null;
 
-const config = _config.default;
+const getSearchQuery = () => {
+  if (args.artist && args.title) return args.artist + ' - ' + args.title;
+  if (args.q) return args.q;
+  if (args.query) return args.query;
+  if (args.release) return args.release;
+  if (args.album) return args.album;
+  if (args.single) return args.single;
+  if (COMMAND) return args._[1];
+  return args._[0] || null;
+};
 
-const argv = minimist(process.argv.slice(2));
+const promptUser = async () => {
+  const {
+    clientId,
+    clientSecret,
+  } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'clientId',
+      message: 'Enter your Spotify Client ID:',
+      validate: valueRaw => {
+        const value = valueRaw.trim();
+        if (value === '') return 'Spotify Client ID is required.';
+        if (
+          value.length < 32
+          || value.length > 32
+        ) return 'Spotify Client ID must have 32 characters.';
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'clientSecret',
+      message: 'Enter your Spotify Client Secret:',
+      validate: valueRaw => {
+        const value = valueRaw.trim();
+        if (value === '') return 'Spotify Client Secret is required.';
+        if (
+          value.length < 32
+          || value.length > 32
+        ) return 'Spotify Client Secret must have 32 characters.';
+        return true;
+      },
+    },
+  ]);
+
+  configstore.set('SPOTIFY_CLIENT_ID', clientId);
+  configstore.set('SPOTIFY_CLIENT_SECRET', clientSecret);
+}
+
+const initClientTokens = async () => {
+  const checkTokensAvailability = () => configstore.get('SPOTIFY_CLIENT_ID') && configstore.get('SPOTIFY_CLIENT_SECRET');
+  if (!checkTokensAvailability()) {
+    await promptUser();
+  }
+  if (!checkTokensAvailability()) {
+    configstore.set('SPOTIFY_CLIENT_ID', process.env.SPOTIFY_CLIENT_ID);
+    configstore.set('SPOTIFY_CLIENT_SECRET', process.env.SPOTIFY_CLIENT_SECRET);
+  }
+
+  return checkTokensAvailability();
+}
 
 async function main() {
-  const query = (argv.artist && argv.release) ? `${argv.artist} - ${argv.release}` : (argv.q || argv.query);
+  await initClientTokens();
 
-  if (!query) {
-    console.info('');
-    console.info('Please use --artist and --release to continue.');
-    console.info('');
-    console.info('Alternative parameters are --q and --query.');
-    console.info('');
-    console.info('Examples:');
-    console.info('  muzovano --artist=Igorrr --release=Hallelujah');
-    console.info('  muzovano --artist="Avenged Sevenfold" --release="Life Is But a Dream"');
-    console.info('  muzovano --q="Avenged Sevenfold - Life Is But a Dream');
-    console.info('');
-    console.info('Warning: for --q and --query use ` - ` as a separator between artist and release name.');
-    return;
-  }
+  const searchQuery = getSearchQuery();
+  const album = await searchAlbum(sanitize(searchQuery));
+  const artistName = album.artists[0].name;
+  const releaseName = album.name;
+  const coverUrl = album.images[0].url;
 
-  fs.mkdirSync(config.PREVIEW_FOLDER_PATH, { recursive: true });
-
-  const sanitizedQuery = sanitize(query);
-
-  const spotifyFilePath = path.join(config.SPOTIFY_FOLDER_PATH, `${sanitizedQuery}.json`);
-
-  let spotifySearchData;
-
-  // check if exists
-  if (!fs.existsSync(spotifyFilePath)) {
-    spotifySearchData = await searchAlbum(query);
-  } else console.log('Data already downloaded! Reading from files...');
-
-  spotifySearchData = spotifySearchData || JSON.parse(fs.readFileSync(spotifyFilePath, 'utf8'));
-
-  const artistName = spotifySearchData.artists[0].name;
-  const releaseName = spotifySearchData.name;
-  const coverUrl = spotifySearchData.images[0].url;
-
-  const palette = await Vibrant.from(coverUrl).getPalette();
-
-  for (const color in palette) {
-    if (Object.hasOwnProperty.call(palette, color)) {
-      palette[color] = palette[color]._rgb.map(c => parseInt(c));
-      console.log('\x1b[48;2;' + palette[color].join(';') + 'm  \x1b[0m', ':', color);
-    }
-  }
-
-  await createImage(coverUrl, palette, {
+  const {
+    generatedPath,
+    palette,
+  } = await createImage(coverUrl, {
     artistName,
     releaseName: removeParentheses(releaseName),
   });
 
-  console.log('Successfully finished');
+  console.log('Done');
 }
 
 await main();

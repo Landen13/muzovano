@@ -1,3 +1,7 @@
+import Configstore from 'configstore';
+
+export const configstore = new Configstore('muzovano');
+
 export default {
   CANVAS_TOP_PADDING: 6,
   CANVAS_BOTTOM_PADDING: 4,
@@ -36,5 +40,6 @@ export default {
     'logo',
     'frame',
     'vignette',
+    'shadow',
   ],
 };
