@@ -23,8 +23,6 @@ let COLORS;
 const CURRENT_DIR = process.cwd();
 const PACKAGE_DIR = packageDirectorySync({ cwd: new URL(import.meta.url) });
 
-console.log(CURRENT_DIR, PACKAGE_DIR);
-
 const args = minimist(process.argv.slice(2));
 
 const DEFAULT_TEXT_OPTIONS = {
@@ -33,7 +31,7 @@ const DEFAULT_TEXT_OPTIONS = {
   textColor: '#000',
 };
 
-const drawImage = async (context, url, palette, frame = true, shadow = true) => {
+const drawImage = async (context, url, palette) => {
   const image = await loadImage(url);
 
   // Draw the image on the canvas
@@ -42,7 +40,7 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
   const imageX = (config.CANVAS_SIZE - imageWidth) / 2;
   const imageY = config.CANVAS_SIZE * config.CANVAS_TOP_PADDING / 100;
 
-  if (args.noframe !== undefined ? !args.noframe : frame) {
+  if (!args.noframe) {
     const strokeWidth = config.CANVAS_SIZE * config.CANVAS_FRAME_STROKE_WIDTH / 100;
 
     const frameX = imageX - (strokeWidth / 2);
@@ -58,7 +56,7 @@ const drawImage = async (context, url, palette, frame = true, shadow = true) => 
     context.strokeRect(frameX, frameY, frameWidth, frameHeight);
   }
 
-  if (args.noshadow !== undefined ? !args.noshadow : shadow) {
+  if (!args.noshadow) {
     const boxShadowColor = `rgba(${COLORS.shadow || [0,0,0].join(',')}, 0.5)`;
     const boxShadowBlur = config.CANVAS_SIZE * config.SHADOW_SIZE / 100;
     const boxShadowOffsetX = 0;
@@ -154,6 +152,7 @@ async function applyVignetteEffect(canvas, _strength = 50, _color = [0, 0, 0]) {
   const radius = Math.max(centerX, centerY);
 
   let strength = _strength;
+
   let color = COLORS.vignette || _color;
 
   if (args.vignettestrength !== undefined && args.vignettestrength >= 0 && args.vignettestrength <= 100) strength = +args.vignettestrength;
@@ -323,7 +322,7 @@ export const createImage = async (imageUrl, data) => {
 
   drawGradient(context, canvas, palette);
 
-  if (args.novignette !== undefined && !args.novignette) {
+  if (!args.novignette) {
     applyVignetteEffect(canvas);
   }
 
