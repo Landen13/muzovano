@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import appRoot from 'app-root-path';
+import { packageDirectorySync } from 'pkg-dir';
 
 import _ from 'lodash';
 import Color from 'color';
@@ -21,13 +21,9 @@ import config from './config.js';
 let COLORS;
 
 const CURRENT_DIR = process.cwd();
-const PACKAGE_DIR = appRoot.toString();
+const PACKAGE_DIR = packageDirectorySync({ cwd: new URL(import.meta.url) });
 
-console.log('process.cwd', process.cwd());
-console.log('appRoot.toString', appRoot.toString());
-console.log(appRoot);
-console.log('path.resolve()', path.resolve());
-console.log('path.resolve(./)', path.resolve('./'));
+console.log(CURRENT_DIR, PACKAGE_DIR);
 
 const args = minimist(process.argv.slice(2));
 
