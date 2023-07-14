@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import appRoot from 'app-root-path';
 
 import _ from 'lodash';
 import Color from 'color';
@@ -7,6 +8,7 @@ import Vibrant from 'node-vibrant';
 import sanitize from 'sanitize-filename';
 import minimist from 'minimist';
 import { createCanvas, loadImage, registerFont } from 'canvas';
+import { dirname } from 'dirname-filename-esm';
 
 import {
   validateColor,
@@ -18,8 +20,8 @@ import config from './config.js';
 
 let COLORS;
 
-const PACKAGE_DIR = path.resolve();
 const CURRENT_DIR = process.cwd();
+const PACKAGE_DIR = appRoot.toString();
 
 const args = minimist(process.argv.slice(2));
 
@@ -296,6 +298,9 @@ const logPalette = palette => {
 export const createImage = async (imageUrl, data) => {
   registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH), { family: config.FONT_FAMILY });
   registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH2), { family: config.FONT_FAMILY2 });
+
+  console.log('Using cover from:', imageUrl);
+  console.log('');
 
   const palette = await getPaletteFromImage(imageUrl);
 
