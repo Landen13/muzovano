@@ -18,7 +18,11 @@ When you run `muzovano "text for search"` it shows you 3 search results. Choose 
 
 ### Strength of some effects (only for the vignette so far):
 
-`—vignettestrength=[value from 0 to 100]` - changes the strength of the vignette - the percentage of transparency. The default is `50`.
+`--vignettestrength=[value from 0 to 100]` - changes the strength of the vignette - the percentage of transparency. The default is `50`.
+
+### Ukrainian artist
+
+`--ua` - draws a Ukrainian flag icon to the left from artist name. Expect all countries flags available in future versions.
 
 ### Colors
 

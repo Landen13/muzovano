@@ -32,6 +32,16 @@ const DEFAULT_TEXT_OPTIONS = {
   textColor: '#000',
 };
 
+const drawUA = async (textPosition, canvas) => {
+  const context = canvas.getContext('2d');
+
+  const ua = await loadImage(path.resolve(PACKAGE_DIR, 'images/ua.png'));
+
+  const { width, height } = ua;
+
+  context.drawImage(ua, textPosition.x - width - 22, textPosition.y + (textPosition.textHeight / 2) - (height / 2), width, height);
+}
+
 const drawImage = async (context, url, palette) => {
   const image = await loadImage(url);
 
@@ -282,6 +292,8 @@ export const drawText = (text, canvas, userOptions = {}, positionCallback) => {
   context.fillText(text, x, y);
   context.fillStyle = backupFillStyle;
   context.font = backupFont;
+
+  return { x, y, textWidth, textHeight };
 };
 
 const getPaletteFromImage = async imageUrl => {
@@ -354,7 +366,7 @@ export const createImage = async (imageUrl, data) => {
 
   const textColor = COLORS.text || COLORS.accent;
 
-  drawText(
+  const releaseNamePosition = drawText(
     data.releaseName.toUpperCase(),
     canvas,
     {
@@ -374,7 +386,7 @@ export const createImage = async (imageUrl, data) => {
     },
   );
 
-  drawText(
+  const artistNamePosition = drawText(
     data.artistName.toUpperCase(),
     canvas,
     { textColor },
@@ -386,6 +398,8 @@ export const createImage = async (imageUrl, data) => {
       return { x, y };
     },
   );
+
+  if (args.ua) await drawUA(artistNamePosition, canvas);
 
   // Convert the canvas to a PNG image buffer
   const buffer = canvas.toBuffer();
