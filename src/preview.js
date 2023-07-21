@@ -9,6 +9,7 @@ import sanitize from 'sanitize-filename';
 import minimist from 'minimist';
 import { createCanvas, loadImage, registerFont } from 'canvas';
 import { dirname } from 'dirname-filename-esm';
+import StackBlur from 'stackblur-canvas';
 
 import {
   validateColor,
@@ -132,6 +133,11 @@ const initColors = (colorNames, palette) => {
     };
   }, {});
 };
+
+const drawBlur = (canvas, imageUrl) => {
+  // StackBlur.canvasRGBA(canvas, 0, 0, canvas.width, canvas.height, 15);
+  StackBlur.canvasRGB(canvas, top_x, top_y, width, height, radius);
+}
 
 const drawGradient = (context, canvas, palette) => {
   // Create a vertical gradient
@@ -320,7 +326,15 @@ export const createImage = async (imageUrl, data) => {
 
   COLORS = config[colorsSymbol];
 
-  drawGradient(context, canvas, palette);
+  switch (args.bg) {
+    case 'blur':
+      drawBlur(canvas, imageUrl);
+      break;
+    case 'gradient':
+    default:
+      drawGradient(context, canvas, palette);
+      break;
+  }
 
   if (!args.novignette) {
     applyVignetteEffect(canvas);
