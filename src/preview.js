@@ -144,22 +144,46 @@ const initColors = (colorNames, palette) => {
   }, {});
 };
 
-const drawBlur = (canvas, imageUrl) => {
-  // StackBlur.canvasRGBA(canvas, 0, 0, canvas.width, canvas.height, 15);
-  StackBlur.canvasRGB(canvas, top_x, top_y, width, height, radius);
+const drawBlur = async (canvas, imageUrl) => {
+  const context = canvas.getContext('2d');
+  const image = await loadImage(imageUrl);
+
+  const tempCanvas = createCanvas(canvas.width, canvas.height);
+  const tempContext = tempCanvas.getContext('2d');
+
+  tempContext.fillStyle = 'rgba(255, 255, 255, 0)';
+  tempContext.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+  tempContext.drawImage(image, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  context.drawImage(image, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  StackBlur.canvasRGBA(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, config.CANVAS_SIZE * config.BLUR_RADIUS / 100);
+
+  context.drawImage(tempCanvas, 0, 0);
 }
 
-const drawGradient = (context, canvas, palette) => {
-  // Create a vertical gradient
-  const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+const drawGradient = (canvas, angle = 0) => {
+  const context = canvas.getContext('2d');
 
-  // Gradient color stops
+  // Convert the angle from degrees to radians and add 90 degrees to make 0 degrees vertical
+  const angleInRadians = ((angle + 90) % 360) * (Math.PI / 180);
+
+  // Calculate the start and end points based on the angle
+  const startX = canvas.width / 2 + (Math.cos(angleInRadians) * canvas.width) / 2;
+  const startY = canvas.height / 2 + (Math.sin(angleInRadians) * canvas.height) / 2;
+  const endX = canvas.width / 2 - (Math.cos(angleInRadians) * canvas.width) / 2;
+  const endY = canvas.height / 2 - (Math.sin(angleInRadians) * canvas.height) / 2;
+
+  const gradient = context.createLinearGradient(startX, startY, endX, endY);
+
   gradient.addColorStop(0, `rgb(${COLORS.start.join(',')})`);
   gradient.addColorStop(1, `rgb(${COLORS.end.join(',')})`);
 
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 };
+
 
 async function applyVignetteEffect(canvas, _strength = 50, _color = [0, 0, 0]) {
   const context = canvas.getContext('2d');
@@ -340,11 +364,14 @@ export const createImage = async (imageUrl, data) => {
 
   switch (args.bg) {
     case 'blur':
-      drawBlur(canvas, imageUrl);
+      await drawBlur(canvas, imageUrl);
       break;
+    // case 'solid':
+    //   drawBackground(canvas, args.bgcolor);
+    //   break;
     case 'gradient':
     default:
-      drawGradient(context, canvas, palette);
+      await drawGradient(canvas, args.angle);
       break;
   }
 
