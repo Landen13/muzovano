@@ -1,5 +1,14 @@
 #!/usr/bin/env node
 
+import fs from 'fs';
+import path from 'path';
+import { packageDirectorySync } from 'pkg-dir';
+
+const PACKAGE_DIR = packageDirectorySync({ cwd: new URL(import.meta.url) });
+const { version } = JSON.parse(fs.readFileSync(path.resolve(PACKAGE_DIR, 'package.json')));
+
+const args = minimist(process.argv.slice(2));
+
 if (process.argv.length <= 2) {
   console.log('Usage: muzovano <album>');
   console.log('Alternatives:');
@@ -9,7 +18,11 @@ if (process.argv.length <= 2) {
   process.exit(0);
 }
 
-import path from 'path';
+if (args.v || args.version) {
+  console.log(version);
+}
+
+// process.exit(0);
 
 // npm
 import 'dotenv/config';
@@ -24,7 +37,6 @@ import { createImage } from './src/preview.js';
 import { removeParentheses } from './src/utils.js';
 import config, { configstore } from './src/config.js';
 
-const args = minimist(process.argv.slice(2));
 const COMMAND = args._.length > 1 ? args._[0] : null;
 
 const getSearchQuery = () => {

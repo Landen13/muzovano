@@ -8,7 +8,6 @@ import Vibrant from 'node-vibrant';
 import sanitize from 'sanitize-filename';
 import minimist from 'minimist';
 import { createCanvas, loadImage, registerFont } from 'canvas';
-import { dirname } from 'dirname-filename-esm';
 import StackBlur from 'stackblur-canvas';
 
 import {
@@ -28,7 +27,7 @@ const args = minimist(process.argv.slice(2));
 
 const DEFAULT_TEXT_OPTIONS = {
   fontSize: config.CANVAS_SIZE * 0.034,
-  fontFamily: 'NeutralFace',
+  fontFamily: config.FONT_FAMILY_1,
   textColor: '#000',
 };
 
@@ -269,7 +268,7 @@ const calculateFontSize = (text, desiredWidth, fontFamily, minFontSize, maxFontS
   let fontSize = maxFontSize;
 
   while (fontSize >= minFontSize) {
-    context.font = `${fontSize}px ${fontFamily}`;
+    context.font = `${fontSize}px "${fontFamily}"`;
     const measuredWidth = context.measureText(text).width;
 
     if (measuredWidth <= desiredWidth) {
@@ -279,7 +278,6 @@ const calculateFontSize = (text, desiredWidth, fontFamily, minFontSize, maxFontS
     fontSize--;
   }
 
-  // If the desired width cannot be achieved within the given font size range, return the minimum font size
   return minFontSize;
 }
 
@@ -293,7 +291,10 @@ export const drawText = (text, canvas, userOptions = {}, positionCallback) => {
   const backupFillStyle = context.fillStyle;
   context.fillStyle = Color.rgb(options.textColor).string();
   const backupFont = context.font;
-  context.font = `${options.fontSize}px ${options.fontFamily}`;
+
+  context.font = `${options.fontSize}px "${options.fontFamily}"`;
+
+  if (options.fontWeight) context.font = options.fontWeight + ' ' + context.font;
 
   // Calculate the text position
   const { width: textWidth } = context.measureText(text);
@@ -338,9 +339,30 @@ const logPalette = palette => {
   }
 }
 
+const registerFonts = () => {
+  [1, 2].forEach(n => {
+    let fontPath = path.resolve(PACKAGE_DIR, config[`FONT_PATH_${n}`]);
+    const fontArg = args[`font${n}`];
+
+    if (fontArg && path.isAbsolute(fontArg) && fs.existsSync(fontArg)) {
+      fontPath = fontArg;
+    }
+
+    registerFont(
+      fontPath,
+      {
+        family: config[`FONT_FAMILY_${n}`],
+        weight: config[`FONT_WEIGHT_${n}`],
+      },
+    );
+  });
+
+  console.log('Registered fonts.');
+  console.log('');
+};
+
 export const createImage = async (imageUrl, data) => {
-  registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH), { family: config.FONT_FAMILY });
-  registerFont(path.resolve(PACKAGE_DIR, config.FONT_TTF_PATH2), { family: config.FONT_FAMILY2 });
+  registerFonts();
 
   console.log('Using cover from:', imageUrl);
   console.log('');
@@ -385,7 +407,7 @@ export const createImage = async (imageUrl, data) => {
   const releaseFontSize = calculateFontSize(
     data.releaseName.toUpperCase(),
     config.CANVAS_SIZE * 0.6,
-    `${DEFAULT_TEXT_OPTIONS.fontFamily}-Bold`,
+    `${config.FONT_FAMILY_1}`,
     0,
     config.CANVAS_SIZE * 0.06,
     canvas,
@@ -398,7 +420,8 @@ export const createImage = async (imageUrl, data) => {
     canvas,
     {
       textColor,
-      fontFamily: `${DEFAULT_TEXT_OPTIONS.fontFamily}-Bold`,
+      fontFamily: `${DEFAULT_TEXT_OPTIONS.fontFamily}`,
+      fontWeight: '700',
       fontSize: releaseFontSize,
     },
     (textWidth, textHeight, options) => {

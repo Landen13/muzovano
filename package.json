@@ -14,12 +14,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "app-root-path": "^3.1.0",
-    "canvas": "^2.11.2",
+    "canvas": "^2.10.2",
     "color": "^4.2.3",
     "color-convert": "^2.0.1",
     "configstore": "^6.0.0",
-    "dirname-filename-esm": "^1.1.1",
     "dotenv": "^16.3.1",
     "inquirer": "^9.2.8",
     "lodash": "^4.17.21",
